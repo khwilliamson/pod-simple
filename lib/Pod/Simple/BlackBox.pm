@@ -40,6 +40,10 @@ my $cs_re = eval 'qr/\p{IsCs}/';
 my $cn_re = eval 'qr/\p{IsCn}/';
 my $rare_blocks_re
           = eval 'qr/[\p{InIPAExtensions}\p{InSpacingModifierLetters}]/';
+my $script_run_re = eval 'no warnings "experimental::script_run";
+                          qr/ (*script_run: ^ .* $ ) /x';
+my $latin_re = eval 'qr/\p{Latin}/';
+my $non_latin_re = eval 'qr/[^\p{Latin}\p{Inherited}\p{Common}]/';
 
 # Latin script code points not in the first release of Unicode
 my $later_latin_re = eval 'qr/[^\P{Latin}\p{Age=1.1}]/';
@@ -85,8 +89,16 @@ sub parse_lines {             # Usage: $parser->parse_lines(@lines)
    # paragraph buffer.  Because we need to defer processing of =over
    # directives and verbatim paragraphs.  We call _ponder_paragraph_buffer
    # to process this.
-  
+
   $self->{'pod_para_count'} ||= 0;
+
+  # An attempt to match the pod portions of a line.  This is not fool proof,
+  # but is good enough to serve as part of the heuristic for guessing the pod
+  # encoding if not specified.
+  my $format_codes = join "", '[', grep { / ^ [A-Za-z] $/x }
+                                                keys %{$self->{accept_codes}};
+  $format_codes .= ']';
+  my $pod_chars_re = qr/ ^ = [A-Za-z]+ | $format_codes < /x;
 
   my $line;
   foreach my $source_line (@_) {
@@ -194,7 +206,10 @@ sub parse_lines {             # Usage: $parser->parse_lines(@lines)
       # If any of the sequences can't be UTF-8, we quit there and choose
       # CP1252.  If all could be UTF-8, we see if any of the code points
       # represented are unlikely to be in pod.  If so, we guess CP1252.  If
-      # not, UTF-8.
+      # not, we check if the line is all in the same script; if not guess
+      # CP1252; otherwise UTF-8.  For perls that don't have convenient script
+      # run testing, see if there is both Latin and non-Latin.  If so, CP1252,
+      # otherwise UTF-8.
       #
       # On EBCDIC platforms, the situation is somewhat different.  In
       # UTF-EBCDIC, not only do ASCII-range bytes represent their code points,
@@ -344,7 +359,37 @@ sub parse_lines {             # Usage: $parser->parse_lines(@lines)
       # unlikely be in pod.
       goto set_1252 if $later_latin_re && $copy =~ $later_latin_re;
 
-      # To get here, the UTF-8 is legal, and we haven't excluded it, so guess that
+      # On perls that handle script runs, if the UTF-8 interpretation yields
+      # a single script, we guess UTF-8, otherwise just having a mixture of
+      # scripts is suspicious, so guess CP1252.  We first strip off, as best
+      # we can, the ASCII characters that look like they are pod directives,
+      # as these would always show as mixed with non-Latin text.
+      $copy =~ s/$pod_chars_re//g;
+
+      if ($script_run_re) {
+        goto set_utf8 if $copy =~ $script_run_re;
+        goto set_1252;
+      }
+
+      # Even without script runs, but on recent enough perls and Unicodes, we
+      # can check if there is a mixture of both Latin and non-Latin.  Again,
+      # having a mixture of scripts is suspicious, so assume CP1252
+      if ($latin_re && $non_latin_re) {
+
+        # If it's all non-Latin, there is no CP1252, as that is Latin
+        # characters and punct, etc.
+        goto set_utf8 if $copy !~ $latin_re;
+
+        # If it's mixed script, guess CP1252
+        goto set_1252 if $copy =~ $non_latin_re;
+
+        # Same, but non-Latin script: must be UTF-8.
+        goto set_utf8;
+
+      }
+
+      # To get here, we have an early perl/Unicode that doesn't have scripts.
+      # And the UTF-8 is legal; so the best we can do is to guess that
 
      set_utf8:
       $encoding = 'UTF-8';
