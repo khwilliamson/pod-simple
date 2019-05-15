@@ -558,7 +558,7 @@ sub esc_uni($) {
 
 sub rtf_esc ($$) {
   # The parameter is true if we should escape hyphens
-  my $escape_re = shift ? $escaped : $escaped_sans_hyphen;
+  my $escape_re = ((shift) ? $escaped : $escaped_sans_hyphen);
 
   # When false, it doesn't change "-" to hard-hyphen.
   #  We don't want to change the "-" to hard-hyphen, because we want to
