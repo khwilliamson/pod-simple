@@ -7,6 +7,7 @@ use Test::More;
 
 BEGIN {
     eval { require Test::Deep; };
+    plan skip_all => 'Fails with Can\'t locate object method "print" via package "IO::File" at t/github_issue_79.t line 33' if $] le 5.012005;
     plan skip_all => 'Need Test::Deep to test' if $@;
     Test::Deep->import('cmp_deeply');
 }
