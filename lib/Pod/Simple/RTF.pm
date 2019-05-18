@@ -203,9 +203,10 @@ sub run {
 
 # Match something like an identifier.  Prefer XID if available, then plain ID,
 # then just ASCII
-my $id_re = eval { qr/['_\p{isXIDS}]['\p{isXIDC}]+/ };
-$id_re    = eval { qr/['_\p{isIDS}]['\p{isIDC}]+/ } unless $id_re;
-$id_re    =        qr/['_a-zA-Z]['a-zA-Z0-9_]+/     unless $id_re;
+my $id_re = Pod::Simple::BlackBox::my_qr('[\'_\p{isXIDS}][\'\p{isXIDC}]+');
+$id_re    = Pod::Simple::BlackBox::my_qr('[\'_\p{isIDS}][\'\p{isIDC}]+')
+                                                                  unless $id_re;
+$id_re    = qr/['_a-zA-Z]['a-zA-Z0-9_]+/ unless $id_re;
 
 sub do_middle {      # the main work
   my $self = $_[0];

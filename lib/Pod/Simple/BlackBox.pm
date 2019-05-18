@@ -18,6 +18,22 @@ package Pod::Simple::BlackBox;
 #
 # Every node in a treelet is a ['name', {attrhash}, ...children...]
 
+
+sub my_qr {
+    my $input = shift;
+
+    #print STDERR __LINE__, ": $input\n";
+    #use re qw(Debug COMPILE);
+    my $re = eval "qr/$input/";
+    return "" if $@;
+
+    eval "'a' =~ /$re/";
+    return "" if $@;
+
+    #print STDERR __LINE__, ": $re\n";
+    return $re;
+}
+
 use integer; # vroom!
 use strict;
 use Carp ();
@@ -32,25 +48,25 @@ BEGIN {
 # Matches a character iff the character will have a different meaning
 # if we choose CP1252 vs UTF-8 if there is no =encoding line.
 # This is broken for early Perls on non-ASCII platforms.
-my $non_ascii_re = eval "qr/[[:^ascii:]]/";
-$non_ascii_re = qr/[\x80-\xFF]/ if ! defined $non_ascii_re;
+my $non_ascii_re = my_qr('[[:^ascii:]]');
+$non_ascii_re = qr/[\x80-\xFF]/ unless $non_ascii_re;
 
 # Use patterns understandable by Perl 5.6, if possible
-my $cs_re = eval 'qr/\p{IsCs}/';
-my $cn_re = eval 'qr/\p{IsCn}/';
+my $cs_re = my_qr('\p{IsCs}');
+my $cn_re = my_qr('\p{IsCn}');
 my $rare_blocks_re
-          = eval 'qr/[\p{InIPAExtensions}\p{InSpacingModifierLetters}]/';
+          = my_qr('[\p{InIPAExtensions}\p{InSpacingModifierLetters}]');
 my $script_run_re = eval 'no warnings "experimental::script_run";
-                          qr/ (*script_run: ^ .* $ ) /x';
-my $latin_re = eval 'qr/\p{Latin}/';
-my $non_latin_re = eval 'qr/[^\p{Latin}\p{Inherited}\p{Common}]/';
+                          my_qr("(?x)(*script_run: ^ .* $ ")';
+my $latin_re = my_qr('\p{Latin}');
+my $non_latin_re = my_qr('[^\p{Latin}\p{Inherited}\p{Common}]');
 
 # Latin script code points not in the first release of Unicode
-my $later_latin_re = eval 'qr/[^\P{Latin}\p{Age=1.1}]/';
+my $later_latin_re = my_qr('[^\P{Latin}\p{Age=1.1}]');
 
 # If this perl doesn't have the Deprecated property, there's only one code
 # point in it that we need be concerned with.
-my $deprecated_re = eval 'qr/\p{Deprecated}/';
+my $deprecated_re = my_qr('\p{Deprecated}');
 $deprecated_re = qr/\x{0149}/ unless $deprecated_re;
 
 my $utf8_bom;
