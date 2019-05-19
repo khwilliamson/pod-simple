@@ -29,8 +29,7 @@ sub my_qr ($$) {
     print STDERR  __LINE__, ": $input_re: $@\n" if $@;
     return "" if $@;
 
-    #my $matches = eval "use re qw(Debug EXECUTE); '$should_match' =~ /$re/";
-    my $matches = eval "'$should_match' =~ /$re/";
+    my $matches = eval "no warnings; '$should_match' =~ /$re/";
     print STDERR  __LINE__, ": $input_re: $@\n" if $@;
     return "" if $@;
 
@@ -59,7 +58,8 @@ $non_ascii_re = qr/[\x80-\xFF]/ unless $non_ascii_re;
 
 # Use patterns understandable by Perl 5.6, if possible
 my $cs_re = my_qr('\p{IsCs}', "\x{D800}");
-my $cn_re = my_qr('\p{IsCn}', "\x{10FFFF}");
+my $cn_re = my_qr('\p{IsCn}', "\x{09E4}");  # <reserved> code point unlikely
+                                            # to get assigned
 my $rare_blocks_re
           = my_qr('[\p{InIPAExtensions}\p{InSpacingModifierLetters}]',
                   "\x{250}");
