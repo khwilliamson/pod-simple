@@ -253,6 +253,7 @@ sub parse_lines {             # Usage: $parser->parse_lines(@lines)
       # XXX probably if the line has E<foo> that evaluates to illegal CP1252,
       # then it is UTF-8.  But we haven't processed E<> yet.
 
+      print STDERR __LINE__, ": \$] lt 5.6.0\n" if $] lt 5.006_000;
       goto set_1252 if $] lt 5.006_000;    # No UTF-8 on very early perls
 
       my $copy;
@@ -266,6 +267,7 @@ sub parse_lines {             # Usage: $parser->parse_lines(@lines)
         # sequence is valid UTF-8 or not; if valid it turns on the UTF-8 flag
         # needed below for script run detection
         goto set_1252 if ! utf8::decode($copy);
+        print STDERR __LINE__, ": decoded\n";
       }
       elsif (ord("A") != 65) {  # Early EBCDIC, assume UTF-8.  What's a windows
                                 # code page doing here anyway?
@@ -310,6 +312,7 @@ sub parse_lines {             # Usage: $parser->parse_lines(@lines)
           my $min_cont = 0x80;
 
           if ($b_ord < 0xC2) { #  A start byte < C2 is malformed
+            print STDERR __LINE__, ": illegal start_byte $b_ord\n";
             goto set_1252;
           }
           elsif ($b_ord <= 0xDF) {
@@ -328,10 +331,12 @@ sub parse_lines {             # Usage: $parser->parse_lines(@lines)
           }
           else { # F4 is the highest start byte for legal Unicode; higher is
                  # unlikely to be in pod.
+            print STDERR __LINE__, ": high start_byte $b_ord\n";
             goto set_1252;
           }
 
           # ? not enough continuation bytes available
+          print STDERR __LINE__, ": too long\n" if $i + $needed >= length $line;
           goto set_1252 if $i + $needed >= length $line;
 
           # Accumulate the ordinal of the character from the remaining
@@ -370,22 +375,28 @@ sub parse_lines {             # Usage: $parser->parse_lines(@lines)
       goto set_utf8 if ord("A") == 65 && $line =~ /[\x81\x8D\x8F\x90\x9D]/;
 
       # The C1 controls are not likely to appear in pod
+      print STDERR __LINE__, ":  non continuation\n" if $copy =~ /[\x80-\x9F]/;;
       goto set_1252 if ord("A") == 65 && $copy =~ /[\x80-\x9F]/;
 
       # Nor are surrogates nor unassigned, nor deprecated.
+      print STDERR __LINE__, ":  surrogate\n" if $copy =~ $cs_re;
       goto set_1252 if $copy =~ $cs_re;
+      print STDERR __LINE__, ":  unassigned\n" if $cn_re && $copy =~ $cn_re;
       goto set_1252 if $cn_re && $copy =~ $cn_re;
+      print STDERR __LINE__, ":  deprecated\n" if $copy =~ $deprecated_re;
       goto set_1252 if $copy =~ $deprecated_re;
 
       # Nor are rare code points.  But this is hard to determine.  khw
       # believes that IPA characters and the modifier letters are unlikely to
       # be in pod (and certainly very unlikely to be the in the first line in
       # the pod containing non-ASCII)
+      print STDERR __LINE__, ":  rare\n" if $rare_blocks_re && $copy =~ $rare_blocks_re;
       goto set_1252 if $rare_blocks_re && $copy =~ $rare_blocks_re;
 
       # The first Unicode version included essentially every Latin character
       # in modern usage.  So, a Latin character not in the first release will
       # unlikely be in pod.
+      print STDERR __LINE__, ":  rare\n" if $later_latin_re && $copy =~ $later_latin_re;
       goto set_1252 if $later_latin_re && $copy =~ $later_latin_re;
 
       # On perls that handle script runs, if the UTF-8 interpretation yields
@@ -397,6 +408,7 @@ sub parse_lines {             # Usage: $parser->parse_lines(@lines)
 
       if ($script_run_re) {
         goto set_utf8 if $copy =~ $script_run_re;
+        print STDERR __LINE__, ":  not script run\n";
         goto set_1252;
       }
 
@@ -410,6 +422,7 @@ sub parse_lines {             # Usage: $parser->parse_lines(@lines)
         goto set_utf8 if $copy !~ $latin_re;
 
         # If it's mixed script, guess CP1252
+        print STDERR __LINE__, ":  mixed\n" if $copy =~ $non_latin_re;
         goto set_1252 if $copy =~ $non_latin_re;
 
         # Same, but non-Latin script: must be UTF-8.
