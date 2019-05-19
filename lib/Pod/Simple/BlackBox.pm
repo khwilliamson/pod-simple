@@ -57,7 +57,12 @@ my $non_ascii_re = my_qr('[[:^ascii:]]', "\xB6");
 $non_ascii_re = qr/[\x80-\xFF]/ unless $non_ascii_re;
 
 # Use patterns understandable by Perl 5.6, if possible
-my $cs_re = my_qr('\p{IsCs}', "\x{D800}");
+my $cs_re;
+{
+    no warnings;
+    $cs_re = my_qr('\p{IsCs}', "\x{D800}");
+    $cs_re = qr/[\x{D800}-\x{DFFF}]/ unless $cs_re;
+}
 my $cn_re = my_qr('\p{IsCn}', "\x{09E4}");  # <reserved> code point unlikely
                                             # to get assigned
 my $rare_blocks_re
@@ -74,8 +79,8 @@ my $later_latin_re = my_qr('[^\P{Latin}\p{Age=1.1}]', "\x{1F6}");
 
 # If this perl doesn't have the Deprecated property, there's only one code
 # point in it that we need be concerned with.
-my $deprecated_re = my_qr('\p{Deprecated}', "\x{E0001}");
-$deprecated_re = qr/\x{E0001}/ unless $deprecated_re;
+my $deprecated_re = my_qr('\p{Deprecated}', "\x{149}");
+$deprecated_re = qr/\x{149}/ unless $deprecated_re;
 
 my $utf8_bom;
 if (($] ge 5.007_003)) {
@@ -368,9 +373,9 @@ sub parse_lines {             # Usage: $parser->parse_lines(@lines)
       goto set_1252 if ord("A") == 65 && $copy =~ /[\x80-\x9F]/;
 
       # Nor are surrogates nor unassigned, nor deprecated.
-      goto set_1252 if $cs_re && $copy =~ $cs_re;
+      goto set_1252 if $copy =~ $cs_re;
       goto set_1252 if $cn_re && $copy =~ $cn_re;
-      goto set_1252 if $deprecated_re && $copy =~ $deprecated_re;
+      goto set_1252 if $copy =~ $deprecated_re;
 
       # Nor are rare code points.  But this is hard to determine.  khw
       # believes that IPA characters and the modifier letters are unlikely to
