@@ -22,15 +22,15 @@ package Pod::Simple::BlackBox;
 sub my_qr {
     my $input = shift;
 
-    #print STDERR __LINE__, ": $input\n";
-    #use re qw(Debug COMPILE);
+    print STDERR __LINE__, ": $input\n";
+    use re qw(Debug ALL);
     my $re = eval "qr/$input/";
     return "" if $@;
 
     eval "'a' =~ /$re/";
     return "" if $@;
 
-    #print STDERR __LINE__, ": $re\n";
+    print STDERR __LINE__, ": $re\n";
     return $re;
 }
 
