@@ -73,8 +73,8 @@ my $rare_blocks_re
           = my_qr('[\p{InIPAExtensions}\p{InSpacingModifierLetters}]',
                   "\x{250}");
 my $script_run_re = eval 'no warnings "experimental::script_run";
-                          my_qr("(?x)(*script_run: ^ .* $ ",
-                                "a")';
+                          qr/(*script_run: ^ .* $ )/x';
+print STDERR __LINE__, ": $@\n" if $@;
 my $latin_re = my_qr('\p{Latin}', "\x{100}");
 my $non_latin_re = my_qr('[^\p{Latin}\p{Inherited}\p{Common}]', "\x{390}");
 
@@ -271,7 +271,6 @@ sub parse_lines {             # Usage: $parser->parse_lines(@lines)
         # sequence is valid UTF-8 or not; if valid it turns on the UTF-8 flag
         # needed below for script run detection
         goto set_1252 if ! utf8::decode($copy);
-        print STDERR __LINE__, ": decoded\n";
       }
       elsif (ord("A") != 65) {  # Early EBCDIC, assume UTF-8.  What's a windows
                                 # code page doing here anyway?
@@ -379,7 +378,7 @@ sub parse_lines {             # Usage: $parser->parse_lines(@lines)
       goto set_utf8 if ord("A") == 65 && $line =~ /[\x81\x8D\x8F\x90\x9D]/;
 
       # The C1 controls are not likely to appear in pod
-      print STDERR __LINE__, ": $copy: non continuation\n" if $copy =~ /[\x80-\x9F]/;;
+      print STDERR __LINE__, ": $copy: non continuation\n" if $copy =~ /[\x80-\x9F]/;
       goto set_1252 if ord("A") == 65 && $copy =~ /[\x80-\x9F]/;
 
       # Nor are surrogates nor unassigned, nor deprecated.
@@ -426,10 +425,17 @@ sub parse_lines {             # Usage: $parser->parse_lines(@lines)
         goto set_utf8 if $copy !~ $latin_re;
 
         # If it's mixed script, guess CP1252
-        print STDERR __LINE__, ": $copy: mixed\n" if $copy =~ $non_latin_re;
+        if ($copy =~ /price/) {
+            use re qw(Debug EXECUTE);
+            my $copy_re = qr/$non_latin_re|\x{1F}/;
+            my $extra_copy = $copy;
+            print STDERR __LINE__, ": $copy: mixed\n" if $extra_copy =~ m/$copy_re/;
+        }
+        print STDERR __LINE__, ": $copy: mixed\n" if $copy =~ m/$non_latin_re/;
         goto set_1252 if $copy =~ $non_latin_re;
 
         # Same, but non-Latin script: must be UTF-8.
+        print STDERR __LINE__, ": $copy: is utf8\n";
         goto set_utf8;
 
       }
@@ -438,10 +444,12 @@ sub parse_lines {             # Usage: $parser->parse_lines(@lines)
       # And the UTF-8 is legal; so the best we can do is to guess that
 
      set_utf8:
+      #print STDERR __LINE__, ": $copy: is UTF-8\n";
       $encoding = 'UTF-8';
       goto done_set;
 
      set_1252:
+      #print STDERR __LINE__, ": $copy: is 1252\n";
       $encoding = 'CP1252';
 
      done_set:
