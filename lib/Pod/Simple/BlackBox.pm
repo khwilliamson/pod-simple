@@ -19,12 +19,22 @@ package Pod::Simple::BlackBox;
 #
 # Every node in a treelet is a ['name', {attrhash}, ...children...]
 
+use integer; # vroom!
+use strict;
+use Carp ();
+use vars qw($VERSION );
+$VERSION = '3.36';
+#use constant DEBUG => 7;
 
 sub my_qr ($$) {
+
+    # $1 is a pattern to compile and return.  Older perls compile any
+    # syntactically valid property, even if it isn't legal.  To cope with
+    # this, return an empty string unless the compiled pattern also
+    # successfully matches $2, which the caller furnishes.
+
     my ($input_re, $should_match) = @_;
 
-    #print STDERR __FILE__, ": ", __LINE__, ": $input_re\n";
-    #use re qw(Debug ALL);
     my $re = eval "qr/$input_re/";
     print STDERR  __LINE__, ": $input_re: $@\n" if $@;
     return "" if $@;
@@ -33,18 +43,12 @@ sub my_qr ($$) {
     print STDERR  __LINE__, ": $input_re: $@\n" if $@;
     return "" if $@;
 
-    #print STDERR  __LINE__, ": $re\n" if $matches;
     return $re if $matches;
+
     print STDERR  __LINE__, ": $input_re: didn't match\n";
     return "";
 }
 
-use integer; # vroom!
-use strict;
-use Carp ();
-use vars qw($VERSION );
-$VERSION = '3.36';
-#use constant DEBUG => 7;
 BEGIN {
   require Pod::Simple;
   *DEBUG = \&Pod::Simple::DEBUG unless defined &DEBUG
@@ -375,28 +379,28 @@ sub parse_lines {             # Usage: $parser->parse_lines(@lines)
       goto set_utf8 if ord("A") == 65 && $line =~ /[\x81\x8D\x8F\x90\x9D]/;
 
       # The C1 controls are not likely to appear in pod
-      print STDERR __LINE__, ":  non continuation\n" if $copy =~ /[\x80-\x9F]/;;
+      print STDERR __LINE__, ": $copy: non continuation\n" if $copy =~ /[\x80-\x9F]/;;
       goto set_1252 if ord("A") == 65 && $copy =~ /[\x80-\x9F]/;
 
       # Nor are surrogates nor unassigned, nor deprecated.
-      print STDERR __LINE__, ":  surrogate\n" if $copy =~ $cs_re;
+      print STDERR __LINE__, ": $copy: surrogate\n" if $copy =~ $cs_re;
       goto set_1252 if $copy =~ $cs_re;
-      print STDERR __LINE__, ":  unassigned\n" if $cn_re && $copy =~ $cn_re;
+      print STDERR __LINE__, ": $copy: unassigned\n" if $cn_re && $copy =~ $cn_re;
       goto set_1252 if $cn_re && $copy =~ $cn_re;
-      print STDERR __LINE__, ":  deprecated\n" if $copy =~ $deprecated_re;
+      print STDERR __LINE__, ": $copy: deprecated\n" if $copy =~ $deprecated_re;
       goto set_1252 if $copy =~ $deprecated_re;
 
       # Nor are rare code points.  But this is hard to determine.  khw
       # believes that IPA characters and the modifier letters are unlikely to
       # be in pod (and certainly very unlikely to be the in the first line in
       # the pod containing non-ASCII)
-      print STDERR __LINE__, ":  rare\n" if $rare_blocks_re && $copy =~ $rare_blocks_re;
+      print STDERR __LINE__, ": $copy: rare\n" if $rare_blocks_re && $copy =~ $rare_blocks_re;
       goto set_1252 if $rare_blocks_re && $copy =~ $rare_blocks_re;
 
       # The first Unicode version included essentially every Latin character
       # in modern usage.  So, a Latin character not in the first release will
       # unlikely be in pod.
-      print STDERR __LINE__, ":  rare\n" if $later_latin_re && $copy =~ $later_latin_re;
+      print STDERR __LINE__, ": $copy: later_latin\n" if $later_latin_re && $copy =~ $later_latin_re;
       goto set_1252 if $later_latin_re && $copy =~ $later_latin_re;
 
       # On perls that handle script runs, if the UTF-8 interpretation yields
@@ -422,7 +426,7 @@ sub parse_lines {             # Usage: $parser->parse_lines(@lines)
         goto set_utf8 if $copy !~ $latin_re;
 
         # If it's mixed script, guess CP1252
-        print STDERR __LINE__, ":  mixed\n" if $copy =~ $non_latin_re;
+        print STDERR __LINE__, ": $copy: mixed\n" if $copy =~ $non_latin_re;
         goto set_1252 if $copy =~ $non_latin_re;
 
         # Same, but non-Latin script: must be UTF-8.
