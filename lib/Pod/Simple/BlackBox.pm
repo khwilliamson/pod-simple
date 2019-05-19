@@ -74,8 +74,8 @@ my $later_latin_re = my_qr('[^\P{Latin}\p{Age=1.1}]', "\x{1F6}");
 
 # If this perl doesn't have the Deprecated property, there's only one code
 # point in it that we need be concerned with.
-my $deprecated_re = my_qr('\p{Deprecated}', "\x{149}");
-$deprecated_re = qr/\x{0149}/ unless $deprecated_re;
+my $deprecated_re = my_qr('\p{Deprecated}', "\x{E0001}");
+$deprecated_re = qr/\x{E0001}/ unless $deprecated_re;
 
 my $utf8_bom;
 if (($] ge 5.007_003)) {
