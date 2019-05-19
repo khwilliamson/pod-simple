@@ -425,9 +425,9 @@ sub parse_lines {             # Usage: $parser->parse_lines(@lines)
         goto set_utf8 if $copy !~ $latin_re;
 
         # If it's mixed script, guess CP1252
-        if ($copy =~ /price/) {
-            eval 'use re qw(debug); my $copy_re = qr/$non_latin_re|.^/; my $extra_copy = $copy; print STDERR __LINE__, ": $copy: mixed\n" if $extra_copy =~ m/$copy_re/;';
-        }
+        #if ($copy =~ /price/) {
+            #eval 'use re qw(debug); my $copy_re = qr/$non_latin_re|.^/; my $extra_copy = $copy; print STDERR __LINE__, ": $copy: mixed\n" if $extra_copy =~ m/$copy_re/;';
+        #}
         print STDERR __LINE__, ": $copy: mixed\n" if $copy =~ m/$non_latin_re/;
         goto set_1252 if $copy =~ $non_latin_re;
 
