@@ -1,3 +1,4 @@
+$|=1;
 package Pod::Simple::BlackBox;
 #
 # "What's in the box?"  "Pain."
@@ -23,11 +24,11 @@ sub my_qr {
     my $input = shift;
 
     print STDERR __LINE__, ": $input\n";
-    use re qw(Debug ALL);
+    #use re qw(Debug ALL);
     my $re = eval "qr/$input/";
     return "" if $@;
 
-    eval "'a' =~ /$re/";
+    eval "use re qw(Debug EXECUTE); 'a' =~ /$re/";
     return "" if $@;
 
     print STDERR __LINE__, ": $re\n";
