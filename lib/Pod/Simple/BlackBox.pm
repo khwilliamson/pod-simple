@@ -74,9 +74,8 @@ my $rare_blocks_re
                   "\x{250}");
 my $script_run_re = eval 'no warnings "experimental::script_run";
                           qr/(*script_run: ^ .* $ )/x';
-#print STDERR __LINE__, ": $@\n" if $@;
 my $latin_re = my_qr('\p{Latin}', "\x{100}");
-my $non_latin_re = my_qr('[^\p{Latin}\p{Inherited}\p{Common}]', "\x{390}");
+my $non_latin_re = my_qr('[^\x00-\xFF\p{Latin}\p{Inherited}\p{Common}]', "\x{390}");
 
 # Latin script code points not in the first release of Unicode
 my $later_latin_re = my_qr('[^\P{Latin}\p{Age=1.1}]', "\x{1F6}");
