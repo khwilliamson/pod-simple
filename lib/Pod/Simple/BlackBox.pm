@@ -74,7 +74,7 @@ my $rare_blocks_re
                   "\x{250}");
 my $script_run_re = eval 'no warnings "experimental::script_run";
                           qr/(*script_run: ^ .* $ )/x';
-print STDERR __LINE__, ": $@\n" if $@;
+#print STDERR __LINE__, ": $@\n" if $@;
 my $latin_re = my_qr('\p{Latin}', "\x{100}");
 my $non_latin_re = my_qr('[^\p{Latin}\p{Inherited}\p{Common}]', "\x{390}");
 
@@ -409,6 +409,7 @@ sub parse_lines {             # Usage: $parser->parse_lines(@lines)
       # as these would always show as mixed with non-Latin text.
       $copy =~ s/$pod_chars_re//g;
 
+      #undef $script_run_re;
       if ($script_run_re) {
         goto set_utf8 if $copy =~ $script_run_re;
         print STDERR __LINE__, ":  not script run\n";
@@ -426,8 +427,8 @@ sub parse_lines {             # Usage: $parser->parse_lines(@lines)
 
         # If it's mixed script, guess CP1252
         if ($copy =~ /price/) {
-            use re qw(Debug EXECUTE);
-            my $copy_re = qr/$non_latin_re|\x{1F}/;
+            use re qw(debug);
+            my $copy_re = qr/$non_latin_re|.^/;
             my $extra_copy = $copy;
             print STDERR __LINE__, ": $copy: mixed\n" if $extra_copy =~ m/$copy_re/;
         }
