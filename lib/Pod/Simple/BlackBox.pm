@@ -20,19 +20,24 @@ package Pod::Simple::BlackBox;
 # Every node in a treelet is a ['name', {attrhash}, ...children...]
 
 
-sub my_qr {
-    my $input = shift;
+sub my_qr ($$) {
+    my ($input_re, $should_match) = @_;
 
-    print STDERR __FILE__, ": ", __LINE__, ": $input\n";
+    #print STDERR __FILE__, ": ", __LINE__, ": $input_re\n";
     #use re qw(Debug ALL);
-    my $re = eval "qr/$input/";
+    my $re = eval "qr/$input_re/";
+    print STDERR  __LINE__, ": $input_re: $@\n" if $@;
     return "" if $@;
 
-    eval "use re qw(Debug EXECUTE); 'a' =~ /$re/";
+    #my $matches = eval "use re qw(Debug EXECUTE); '$should_match' =~ /$re/";
+    my $matches = eval "'$should_match' =~ /$re/";
+    print STDERR  __LINE__, ": $input_re: $@\n" if $@;
     return "" if $@;
 
-    print STDERR __FILE__, ": ", __LINE__, ": $re\n";
-    return $re;
+    #print STDERR  __LINE__, ": $re\n" if $matches;
+    return $re if $matches;
+    print STDERR  __LINE__, ": $input_re: didn't match\n";
+    return "";
 }
 
 use integer; # vroom!
@@ -49,25 +54,27 @@ BEGIN {
 # Matches a character iff the character will have a different meaning
 # if we choose CP1252 vs UTF-8 if there is no =encoding line.
 # This is broken for early Perls on non-ASCII platforms.
-my $non_ascii_re = my_qr('[[:^ascii:]]');
+my $non_ascii_re = my_qr('[[:^ascii:]]', "\xB6");
 $non_ascii_re = qr/[\x80-\xFF]/ unless $non_ascii_re;
 
 # Use patterns understandable by Perl 5.6, if possible
-my $cs_re = my_qr('\p{IsCs}');
-my $cn_re = my_qr('\p{IsCn}');
+my $cs_re = my_qr('\p{IsCs}', "\x{D800}");
+my $cn_re = my_qr('\p{IsCn}', "\x{10FFFF}");
 my $rare_blocks_re
-          = my_qr('[\p{InIPAExtensions}\p{InSpacingModifierLetters}]');
+          = my_qr('[\p{InIPAExtensions}\p{InSpacingModifierLetters}]',
+                  "\x{250}");
 my $script_run_re = eval 'no warnings "experimental::script_run";
-                          my_qr("(?x)(*script_run: ^ .* $ ")';
-my $latin_re = my_qr('\p{Latin}');
-my $non_latin_re = my_qr('[^\p{Latin}\p{Inherited}\p{Common}]');
+                          my_qr("(?x)(*script_run: ^ .* $ ",
+                                "a")';
+my $latin_re = my_qr('\p{Latin}', "\x{100}");
+my $non_latin_re = my_qr('[^\p{Latin}\p{Inherited}\p{Common}]', "\x{390}");
 
 # Latin script code points not in the first release of Unicode
-my $later_latin_re = my_qr('[^\P{Latin}\p{Age=1.1}]');
+my $later_latin_re = my_qr('[^\P{Latin}\p{Age=1.1}]', "\x{1F6}");
 
 # If this perl doesn't have the Deprecated property, there's only one code
 # point in it that we need be concerned with.
-my $deprecated_re = my_qr('\p{Deprecated}');
+my $deprecated_re = my_qr('\p{Deprecated}', "\x{149}");
 $deprecated_re = qr/\x{0149}/ unless $deprecated_re;
 
 my $utf8_bom;

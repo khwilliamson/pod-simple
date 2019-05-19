@@ -343,7 +343,7 @@ sub unaccept_targets {
 
 # XXX Probably it is an error that the digit '9' is excluded from these re's.
 # Broken for early Perls on EBCDIC
-my $xml_name_re = my_qr('[^-.0-8:A-Z_a-z[:^ascii:]]');
+my $xml_name_re = my_qr('[^-.0-8:A-Z_a-z[:^ascii:]]', '9');
 if (! defined $xml_name_re) {
     $xml_name_re = qr/[\x00-\x2C\x2F\x39\x3B-\x40\x5B-\x5E\x60\x7B-\x7F]/;
 }
