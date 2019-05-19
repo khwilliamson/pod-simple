@@ -23,7 +23,7 @@ package Pod::Simple::BlackBox;
 sub my_qr {
     my $input = shift;
 
-    print STDERR __LINE__, ": $input\n";
+    print STDERR __FILE__, ": ", __LINE__, ": $input\n";
     #use re qw(Debug ALL);
     my $re = eval "qr/$input/";
     return "" if $@;
@@ -31,7 +31,7 @@ sub my_qr {
     eval "use re qw(Debug EXECUTE); 'a' =~ /$re/";
     return "" if $@;
 
-    print STDERR __LINE__, ": $re\n";
+    print STDERR __FILE__, ": ", __LINE__, ": $re\n";
     return $re;
 }
 
